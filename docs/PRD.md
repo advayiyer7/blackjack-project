@@ -181,9 +181,9 @@ the authoritative process doc.
 
 | # | Phase | Description | Status | Parallel | Depends | PRP Plan |
 |---|-------|-------------|--------|----------|---------|----------|
-| 1 | Architecture (BG Phase 3) | Dataclass contracts, reconciliation algorithm, detector protocol → docs/ARCHITECTURE.md | pending | - | - | - |
-| 2 | M1 Strategy engine | Tables + deviations + engine, tests generated from strategy-tables.md | pending | - | 1 | - |
-| 3 | M2 Counting engine | Hi-Lo, TC, shoe simulator, property tests | pending | with 4 | 1 | - |
+| 1 | Architecture (BG Phase 3) | Dataclass contracts, reconciliation algorithm, detector protocol → docs/ARCHITECTURE.md | complete (user-confirmed 2026-07-03) | - | - | - |
+| 2 | M1 Strategy engine | Tables + deviations + engine, tests generated from strategy-tables.md | complete | - | 1 | - |
+| 3 | M2 Counting engine | Hi-Lo, TC, shoe simulator, property tests | complete | with 4 | 1 | - |
 | 4 | M3 Dataset pipeline | Capture + auto-label ~1,500–2,500 frames, all 52 classes ≥40 instances | pending | with 3 | 1 | - |
 | 5 | M4 Detector fine-tune | Colab T4 train, ONNX export, held-out eval | pending | with 6 (Colab runs in background) | 4 | - |
 | 6 | M5 State tracker | Reconciliation vs recorded shoes, exact count replay | pending | with 5 (uses template-matcher fallback) | 2, 3 | - |

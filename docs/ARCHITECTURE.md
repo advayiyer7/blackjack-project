@@ -1,9 +1,9 @@
 # ARCHITECTURE — blackjack-counter
 
 > BUILD-GUIDE Phase 3 output. Inputs: `docs/PRD.md`, `docs/research/*`. Reviewed adversarially by
-> an architect pass; findings 1–13 incorporated (see §13). Status: DRAFT until user-confirmed.
-> Everything here is a decision, not a suggestion — deviations during implementation must be
-> flagged and recorded here.
+> an architect pass; findings 1–13 incorporated (see §13). **Status: CONFIRMED by user
+> 2026-07-03.** Everything here is a decision, not a suggestion — deviations during
+> implementation must be flagged and recorded here.
 
 ## 1. Design principles
 
@@ -156,7 +156,8 @@ class ReconcileResult:
 @dataclass(frozen=True, slots=True)
 class TableContext:                  # what a single HandView can't know (§13 finding 6)
     num_hands: int                   # 1 = no split yet
-    hand_cards_count: int            # cards in THIS hand (legality)
+    # (amended in M1: per-hand card count is NOT carried here — decide() receives the
+    # hand's cards directly and derives it in HandView.n_cards; see §14)
 
 @dataclass(frozen=True, slots=True)
 class Advice:
@@ -283,13 +284,19 @@ round's settle* — that capture alone keeps the count exact. Capture additional
 points whenever advice is wanted. The overlay's unsettled warning is the backstop when the settle
 capture is forgotten.
 
-## 5. Counting formulas (pinned; finding 8)
+## 5. Counting formulas (pinned; finding 8; amended in M2 — see §14)
 
 ```
 running_count   = Σ HILO_TAG[rank] over ShoeState.seen
-decks_remaining = (decks_total·52 − len(seen)) / 52          # float, min clamp 0.5 deck
-true_count      = floor(running_count / decks_remaining)     # floor toward −∞ (research §3)
+remaining_cards = max(decks_total·52 − len(seen), 26)         # 26 = half-deck clamp
+true_count      = (running_count · 52) // remaining_cards     # EXACT integer floor-division
+decks_remaining = remaining_cards-style float                 # DISPLAY ONLY (overlay)
 ```
+
+TC must be computed in exact integer arithmetic: an IEEE-754 intermediate like 60/52 puts
+mathematically-integer TCs one ULP below the floor boundary (RC −15 with 60 cards left is
+exactly TC −13; the float path returned −14 — M2 review). The float `decks_remaining` exists
+only for the overlay and must never feed index decisions.
 
 Known, intended divergences from the trainer's displayed values (trainer-notes §5): the trainer's
 `DecksLeft` includes a `+1` and counts dealt-but-unrevealed holes; ours counts only *seen* cards —
@@ -323,7 +330,8 @@ via SPLIT events (finding 7).
 - **3+-card hands** (finding 10): vision cannot distinguish a doubled (locked) 3-card hand from a
   hit (live) one — bet chips aren't tracked. The engine still computes hit/stand advice (valid if
   live) and sets `Advice.caveat` so the overlay marks it "if hand still live". Documented
-  limitation, advice-channel only.
+  limitation, advice-channel only. The same applies to locked split-ace hands:
+  `Rules.hit_split_aces` is consumed by the RL env (P5), not by M1 advice legality.
 - Bet suggestion (app-level, not engine): `bet_units = clamp(tc − 1, 1, 8)` — display only.
 
 ## 7. App shell wiring (`app/`)
@@ -443,6 +451,19 @@ Adversarial architect review (Opus) of the first draft produced 13 findings; all
 | 11 | MED | Shutdown underspecified → sentinel + ordering (§7) |
 | 12 | LOW | NMS vs 24px fan overlap → cardinality sanity check (§4.3) |
 | 13 | LOW | last_hand/OverlayModel gaps → added to contracts (§3) |
+
+## 14. Implementation amendments (Phase 4 review record)
+
+Per-milestone review findings that changed contracts or pinned formulas:
+
+| Milestone | Sev | Finding → resolution |
+|---|---|---|
+| M1 | HIGH | Splittable pair whose chart cell is non-split (7,7 vs T) skipped hard-total Fab4 surrender → surrender path now falls through to hard-total logic unless the pair cell is P/Ph(+DAS)/Rp |
+| M1 | HIGH | Surrender fallback hardcoded HIT for Rs cells (dormant) → fallback derived from the chart code symmetrically |
+| M1 | MED | `TableContext.hand_cards_count` dropped from §3 — `decide()` receives the cards and derives `HandView.n_cards`; `TableContext` carries `num_hands` only |
+| M1 | MED | `Rules.hit_split_aces` documented as RL-env-only (§6); deviation lookups made O(1); `Advice` grafting via `dataclasses.replace` |
+| M2 | CRIT | Float TC off-by-one at exact integer boundaries → §5 amended: exact integer floor-division `(RC·52)//remaining_cards`; float decks value is display-only; tests verify against `fractions.Fraction` ground truth |
+| M2 | MED | `HILO_TAGS` wrapped in `MappingProxyType` (runtime-immutable); frozen+slots regression test added |
 
 ---
 **Exit criterion (BUILD-GUIDE Phase 3):** user reviews and CONFIRMS this document. Phase 4 (TDD
