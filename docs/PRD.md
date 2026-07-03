@@ -138,7 +138,9 @@ trainer at 6 decks / 75–80% penetration / H17 defaults. RL chapter completes t
 ### User Flow
 
 1. Start app → drag-select the trainer's game region once (persisted).
-2. Play the trainer; press capture hotkey whenever cards change (or at decision points).
+2. Play the trainer; press the capture hotkey **at least once at each round's settle** (that
+   single capture keeps the count exact — see ARCHITECTURE §4.5), plus at any decision point
+   where advice is wanted. The overlay warns if a round appears to have been skipped unsettled.
 3. Overlay updates: RC, TC, decks left, action (deviation-flagged), bet suggestion.
 4. "LAST HAND" badge appears → finish hand → press reset hotkey at the new shoe.
 5. Quit hotkey exits cleanly. Zero network calls the whole time.
