@@ -27,7 +27,9 @@ from bjcounter.vision.capture import Grabber, find_table, set_dpi_awareness
 REPO = Path(__file__).resolve().parents[1]
 TABLE_PNG = REPO / "data" / "assets" / "table.png"
 LOCATE_COUNTDOWN_S = 5
+START_COUNTDOWN_S = 5
 MIN_MATCH_SCORE = 0.45
+COUNT_BAR_CSS_PX = 36  # the #countinfo bar sits directly above the felt — capture it too
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,7 +49,9 @@ def locate_region(grabber: Grabber) -> tuple[tuple[int, int, int, int], float]:
     print("Searching for the table (one-time, ~10-30s)...")
     match = find_table(screen, cv2.imread(str(TABLE_PNG)))
     x, y, w, h = match.region
-    region = (x + offset_x, y + offset_y, w, h)
+    # Extend upward to include the count bar — per-frame ground truth for evals.
+    bar = round(COUNT_BAR_CSS_PX * match.scale)
+    region = (x + offset_x, max(y + offset_y - bar, 0), w, h + bar)
     print(f"Found: region={region} scale={match.scale:.2f} score={match.score:.3f}")
     if match.score < MIN_MATCH_SCORE:
         print("WARNING: low match confidence — check the preview carefully or pass --region.")
@@ -65,6 +69,10 @@ def confirm_preview(grabber: Grabber, region, session_dir: Path) -> bool:
 def capture_loop(grabber: Grabber, region, session_dir: Path, interval: float) -> int:
     seen_hashes: set[str] = set()
     saved = 0
+    print(f"\nSwitch to the trainer window NOW — capture starts in {START_COUNTDOWN_S}s...")
+    for i in range(START_COUNTDOWN_S, 0, -1):
+        print(f"  {i}...", flush=True)
+        time.sleep(1)
     print("\nCapturing — play now. Ctrl+C to stop.\n")
     try:
         while True:
