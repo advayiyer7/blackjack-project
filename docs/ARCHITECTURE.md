@@ -44,7 +44,8 @@ src/bjcounter/
 ├── vision/           # effectful; numpy/cv2/onnxruntime/mss
 │   ├── capture.py    #   mss region grab -> np.ndarray (BGR)
 │   ├── detector.py   #   CardDetector protocol + OnnxYoloDetector + TemplateMatchDetector
-│   └── autolabel.py  #   M3 dataset tooling (sprite templates -> YOLO labels)
+│   ├── autolabel.py  #   M3 dataset tooling (sprite templates -> YOLO labels)
+│   └── synthesize.py #   M3 synthetic-frame compositor (training pool; §14 M3 amendment)
 ├── rl/               # numpy; depends on counting/ + strategy/ only
 │   ├── env.py        #   count-aware blackjack env (gymnasium-style)
 │   ├── train.py      #   tabular MC control / Q-learning
@@ -464,6 +465,11 @@ Per-milestone review findings that changed contracts or pinned formulas:
 | M1 | MED | `Rules.hit_split_aces` documented as RL-env-only (§6); deviation lookups made O(1); `Advice` grafting via `dataclasses.replace` |
 | M2 | CRIT | Float TC off-by-one at exact integer boundaries → §5 amended: exact integer floor-division `(RC·52)//remaining_cards`; float decks value is display-only; tests verify against `fractions.Fraction` ground truth |
 | M2 | MED | `HILO_TAGS` wrapped in `MappingProxyType` (runtime-immutable); frozen+slots regression test added |
+| M3 | MED | Real capture yields ~175 instances/session across 53 classes — the 40-instance gate needed ~10 more manual sessions → `vision/synthesize.py` + `scripts/make_synthetic.py`: deficit-driven compositor pastes deck.png sprites onto table.png at trainer-exact geometry (count bar included, whole-canvas scaling), validated by an autolabel round-trip test at 4 scales. Synthetic frames = M4 TRAINING pool; real captures reserved for val/test. Accepted gap: synthetic backgrounds lack chips/buttons/rule text — revisit at M4 only if val false-positives appear |
+| M5 | CRIT | Detector mishaps (dropped hit card, vanished split hand, label flicker) can produce deal-shaped frames; the literal §4.2 order would classify them NEW_DEAL and silently double-count → two-tier persistence rule: when the previous accepted frame was itself deal-shaped, the three anchors necessarily coincide, so ANY persisting face refuses NEW_DEAL (a review-verified double-flicker recapture defeated a lone ≥2 bar); otherwise ≥2 persisting faces refuse it, while exactly 1 stays NEW_DEAL — an exact repeat at a reused anchor is a ~2%-per-round coincidence that must recount, else whole rounds silently vanish. Restores §4.2's "suit misreads can't fake a boundary" invariant up to a residual of three simultaneous confident misreads (≈ε³), or a dropped card plus two misreads, in one frame |
+| M5 | HIGH | §4.2's step-0 label-flicker gate, applied literally, would SUSPECT every legitimate re-deal (rounds reuse the same anchors) → gate scoped to non-deal-shaped frames, and the player zone is exempt when the hand count increased (a split deals replacements onto the old fan positions) |
+| M5 | MED | Fresh shoe (`RoundState.table is None`) accepts only a deal-shaped frame; any other frame is SUSPECT — mid-round starts cannot establish continuity, so the tracker waits for the next deal |
+| M5 | LOW | `ReconcileResult` lives in `tracker/rounds.py` beside `RoundState`; layout fitting requires every hand's leftmost card at its anchor (fan slot 0) — cards are never removed individually mid-round, and this pins the NEW_DEAL anchor check to `len(player_hands) == 1` |
 
 ---
 **Exit criterion (BUILD-GUIDE Phase 3):** user reviews and CONFIRMS this document. Phase 4 (TDD
