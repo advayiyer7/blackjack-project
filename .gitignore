@@ -18,6 +18,10 @@ htmlcov/
 # Raw screenshots stay local (security rule §4.2) — YOLO labels ARE committed
 data/raw/
 
+# Synthetic training frames are regenerable from a seed (scripts/make_synthetic.py);
+# derived from third-party sprites, so images stay out of git like data/assets/*.png
+data/synthetic/
+
 # Third-party trainer art (dev-time template assets; provenance in data/assets/README.md)
 data/assets/*.png
 
