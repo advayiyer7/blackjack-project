@@ -185,7 +185,7 @@ the authoritative process doc.
 | 2 | M1 Strategy engine | Tables + deviations + engine, tests generated from strategy-tables.md | complete | - | 1 | - |
 | 3 | M2 Counting engine | Hi-Lo, TC, shoe simulator, property tests | complete | with 4 | 1 | - |
 | 4 | M3 Dataset pipeline | Capture + auto-label; training pool via synthetic compositor (all 53 classes ≥80, ARCHITECTURE §14); real captures = val/test, capture ongoing | in progress | with 3 | 1 | - |
-| 5 | M4 Detector fine-tune | Colab T4 train, ONNX export, held-out eval | pending | with 6 (Colab runs in background) | 4 | - |
+| 5 | M4 Detector fine-tune | Colab T4 train, ONNX export, held-out eval | tooling ready — awaiting user Colab run (dataset zip + notebook + OnnxYoloDetector + gate eval built) | with 6 (Colab runs in background) | 4 | - |
 | 6 | M5 State tracker | Reconciliation + transition classifier built; synthetic-shoe replay exact at every frame; recorded-real-shoe gate awaits M3 captures | core complete | with 5 (uses template-matcher fallback) | 2, 3 | - |
 | 7 | M6 App shell | Region selector, hotkeys, overlay; live smoke test | pending | - | 5, 6 | - |
 | 8 | RL chapter (BG Phase 5) | Env + tabular agent + divergence report | pending | - | 2, 3 | - |

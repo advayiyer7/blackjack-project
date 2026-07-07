@@ -22,6 +22,9 @@ data/raw/
 # derived from third-party sprites, so images stay out of git like data/assets/*.png
 data/synthetic/
 
+# Colab upload bundle (regenerate: scripts/export_dataset.py)
+data/dataset_yolo.zip
+
 # Third-party trainer art (dev-time template assets; provenance in data/assets/README.md)
 data/assets/*.png
 
