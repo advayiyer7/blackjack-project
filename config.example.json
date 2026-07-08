@@ -1,0 +1,24 @@
+{
+  "region": [349, 135, 1200, 845],
+  "scale": 1.25,
+  "rules": {
+    "decks": 6,
+    "h17": true,
+    "das": true,
+    "surrender": "any_card",
+    "peek": true,
+    "double": "any_two",
+    "max_hands": 4,
+    "max_ace_hands": 2,
+    "hit_split_aces": false
+  },
+  "detector": "onnx",
+  "onnx_path": "models/best.onnx",
+  "deck_png": "data/assets/deck.png",
+  "conf_threshold": 0.8,
+  "count_bar_px": 36,
+  "bet_cap": 8,
+  "hotkey_capture": "<ctrl>+<alt>+c",
+  "hotkey_reset": "<ctrl>+<alt>+r",
+  "hotkey_quit": "<ctrl>+<alt>+q"
+}

@@ -25,6 +25,9 @@ data/synthetic/
 # Colab upload bundle (regenerate: scripts/export_dataset.py)
 data/dataset_yolo.zip
 
+# Machine-specific screen coordinates (template: config.example.json)
+config.json
+
 # Third-party trainer art (dev-time template assets; provenance in data/assets/README.md)
 data/assets/*.png
 
