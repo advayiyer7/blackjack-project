@@ -60,8 +60,7 @@ def main() -> None:
 
         for frame in real_frames:
             lines = [
-                yolo_line(hit, frame.scale, frame.frame_w, frame.frame_h)
-                for hit in frame.hits
+                yolo_line(hit, frame.scale, frame.frame_w, frame.frame_h) for hit in frame.hits
             ]
             stem = Path(frame.export_name).stem
             zf.write(frame.path, f"dataset/images/{frame.split}/{frame.export_name}")
@@ -73,8 +72,10 @@ def main() -> None:
 
     size_mb = OUT_ZIP.stat().st_size / 2**20
     print(f"{OUT_ZIP} ({size_mb:.0f} MB)")
-    print(f"frames: train={counts['train']} (synthetic), "
-          f"val={counts['val']}, test={counts['test']} (real captures)")
+    print(
+        f"frames: train={counts['train']} (synthetic), "
+        f"val={counts['val']}, test={counts['test']} (real captures)"
+    )
     print("Next: upload the zip in notebooks/train_yolo.ipynb on Colab (T4 runtime).")
 
 

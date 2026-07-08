@@ -50,9 +50,7 @@ class TemplateMatchDetector:
     instance, so create one detector per capture session.
     """
 
-    def __init__(
-        self, deck_png: Path, scale: float, threshold: float = MATCH_THRESHOLD
-    ) -> None:
+    def __init__(self, deck_png: Path, scale: float, threshold: float = MATCH_THRESHOLD) -> None:
         self._templates = load_templates(deck_png, scale)
         self._scale = scale
         self._threshold = threshold
@@ -75,9 +73,7 @@ class TemplateMatchDetector:
         )
 
 
-def letterbox(
-    frame_bgr: np.ndarray, size: int
-) -> tuple[np.ndarray, float, tuple[float, float]]:
+def letterbox(frame_bgr: np.ndarray, size: int) -> tuple[np.ndarray, float, tuple[float, float]]:
     """Resize keeping aspect, pad to (size, size). Returns (image, ratio, (dw, dh))."""
     h, w = frame_bgr.shape[:2]
     ratio = min(size / w, size / h)
@@ -87,7 +83,12 @@ def letterbox(
     top, bottom = round(dh - 0.1), round(dh + 0.1)
     left, right = round(dw - 0.1), round(dw + 0.1)
     padded = cv2.copyMakeBorder(
-        resized, top, bottom, left, right, cv2.BORDER_CONSTANT,
+        resized,
+        top,
+        bottom,
+        left,
+        right,
+        cv2.BORDER_CONSTANT,
         value=(LETTERBOX_FILL,) * 3,
     )
     return padded, ratio, (left, top)
@@ -183,7 +184,7 @@ class OnnxYoloDetector:
     def __init__(
         self,
         onnx_path: Path,
-        imgsz: int = 1280,
+        imgsz: int | None = None,
         conf_threshold: float = ONNX_CONF_THRESHOLD,
         iou_threshold: float = ONNX_IOU_THRESHOLD,
     ) -> None:
@@ -192,15 +193,28 @@ class OnnxYoloDetector:
         self._session = onnxruntime.InferenceSession(
             str(onnx_path), providers=["CPUExecutionProvider"]
         )
-        self._input_name = self._session.get_inputs()[0].name
+        model_input = self._session.get_inputs()[0]
+        self._input_name = model_input.name
+        # Exports are static-shape (1, 3, S, S): default to the model's own size so a
+        # weights swap (1280 -> 640 retrain) can never silently mismatch the letterbox.
+        if imgsz is None:
+            dim = model_input.shape[2]
+            if not isinstance(dim, int):  # dynamic axes report symbolic names/None
+                raise ValueError(
+                    f"{onnx_path} has a dynamic input shape ({dim!r}) — export with "
+                    "static shapes (the notebook does) or pass imgsz explicitly"
+                )
+            imgsz = dim
         self._imgsz = imgsz
         self._conf = conf_threshold
         self._iou = iou_threshold
+
+    @property
+    def imgsz(self) -> int:
+        return self._imgsz
 
     def detect(self, frame_bgr: np.ndarray) -> tuple[Detection, ...]:
         padded, ratio, pad = letterbox(frame_bgr, self._imgsz)
         blob = padded[:, :, ::-1].transpose(2, 0, 1)[np.newaxis].astype(np.float32) / 255.0
         (output,) = self._session.run(None, {self._input_name: np.ascontiguousarray(blob)})
-        return decode_predictions(
-            output, ratio, pad, frame_bgr.shape[:2], self._conf, self._iou
-        )
+        return decode_predictions(output, ratio, pad, frame_bgr.shape[:2], self._conf, self._iou)

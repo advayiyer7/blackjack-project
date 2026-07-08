@@ -5,6 +5,14 @@ is the label source for real frames. Real captures form the VAL/TEST pools only 
 training runs on the synthetic pool (ARCHITECTURE §14 M3 amendment). The val/test
 split is deterministic: within each session's valid frames, even index -> val, odd ->
 test, so both pools cover every session's capture scale.
+
+Curation: a session may carry an `exclude.json` ({"frame_NNNNN.png": "reason", ...})
+listing frames verified as mid-animation transients (cards captured mid-slide or
+mid-flip render distorted sprites — ambiguous ground truth for a detection benchmark;
+the runtime tracker quarantines such frames as SUSPECT anyway). Flagging candidates
+is automated by scripts/audit_labels.py; a human confirms each exclusion visually.
+Excluded frames leave the export AND the eval — the split parity of the remaining
+frames is unchanged (parity is assigned before exclusion).
 """
 
 from __future__ import annotations
@@ -30,6 +38,7 @@ class RealFrame:
     frame_h: int
     hits: tuple[Hit, ...]
     split: str  # "val" | "test"
+    excluded: str | None = None  # exclusion reason; only set with include_excluded=True
 
     @property
     def export_name(self) -> str:
@@ -51,12 +60,14 @@ def yolo_line(hit: Hit, scale: float, frame_w: int, frame_h: int) -> str:
     return f"{class_id} {cx:.6f} {cy:.6f} {w / frame_w:.6f} {h / frame_h:.6f}"
 
 
-def iter_real_frames(raw_dir: Path) -> Iterator[RealFrame]:
+def iter_real_frames(raw_dir: Path, include_excluded: bool = False) -> Iterator[RealFrame]:
     """Every valid labeled frame across all analyzed capture sessions.
 
     Requires detections.json + session_meta.json per session (run
     scripts/dataset_report.py first). Frames the auto-labeler skipped as invalid are
-    absent from detections.json and therefore excluded here too.
+    absent from detections.json and therefore excluded here too. Curated exclusions
+    (exclude.json) are skipped unless `include_excluded`, which yields them with
+    their reason set (audit tooling reviews past decisions this way).
     """
     for session_dir in sorted(raw_dir.glob("session_*")):
         detections_path = session_dir / "detections.json"
@@ -67,9 +78,17 @@ def iter_real_frames(raw_dir: Path) -> Iterator[RealFrame]:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         _, _, frame_w, frame_h = meta["region"]
         scale = float(report["scale"])
+        exclude_path = session_dir / "exclude.json"
+        excluded = (
+            json.loads(exclude_path.read_text(encoding="utf-8")) if exclude_path.exists() else {}
+        )
+        # NB: split parity comes from the position in the FULL frame list — an
+        # exclusion never shifts the val/test assignment of surviving frames.
         for i, name in enumerate(sorted(report["detections"])):
             path = session_dir / name
             if not path.exists():
+                continue
+            if name in excluded and not include_excluded:
                 continue
             yield RealFrame(
                 session=session_dir.name,
@@ -80,4 +99,5 @@ def iter_real_frames(raw_dir: Path) -> Iterator[RealFrame]:
                 frame_h=int(frame_h),
                 hits=tuple(tuple(h) for h in report["detections"][name]),
                 split="val" if i % 2 == 0 else "test",
+                excluded=excluded.get(name),
             )

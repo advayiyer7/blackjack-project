@@ -77,8 +77,7 @@ def placements(spec: FrameSpec) -> tuple[Placement, ...]:
     for hand_idx, hand in enumerate(spec.hands):
         ox, oy = PLAYER_ANCHORS[len(spec.hands)][hand_idx]
         out += [
-            Placement(card, ox + i * FAN_DX, oy + i * PLAYER_FAN_DY)
-            for i, card in enumerate(hand)
+            Placement(card, ox + i * FAN_DX, oy + i * PLAYER_FAN_DY) for i, card in enumerate(hand)
         ]
     return tuple(out)
 
@@ -112,14 +111,18 @@ def render(
     bar_h = round(COUNT_BAR_CSS_PX * s)
     bar = np.zeros((bar_h, scaled_w, 3), dtype=np.uint8)
     cv2.putText(
-        bar, bar_text, (round(8 * s), round(24 * s)),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.45 * s, (255, 255, 255), 1, cv2.LINE_AA,
+        bar,
+        bar_text,
+        (round(8 * s), round(24 * s)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.45 * s,
+        (255, 255, 255),
+        1,
+        cv2.LINE_AA,
     )
     frame = np.vstack([bar, canvas])
 
-    hits = [
-        CardHit(p.class_id, round(p.x * s), round(p.y * s) + bar_h, 1.0) for p in placed
-    ]
+    hits = [CardHit(p.class_id, round(p.x * s), round(p.y * s) + bar_h, 1.0) for p in placed]
     labels = yolo_lines(hits, frame.shape[1], frame.shape[0], s)
     return frame, tuple(labels)
 
@@ -153,8 +156,7 @@ def plan_frames(
         counts, weights = zip(*HAND_COUNT_WEIGHTS.items(), strict=True)
         n_hands = rng.choices(counts, weights=weights)[0]
         hands = tuple(
-            tuple(draw_face() for _ in range(rng.randint(*cards_per_hand)))
-            for _ in range(n_hands)
+            tuple(draw_face() for _ in range(rng.randint(*cards_per_hand))) for _ in range(n_hands)
         )
         if deficit["back"] > 0 or rng.random() < 0.4:
             dealer = (draw_face(), BACK_CLASS)  # deal-shaped: upcard + hole

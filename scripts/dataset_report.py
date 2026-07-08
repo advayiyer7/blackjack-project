@@ -42,9 +42,7 @@ def analyze_real_sessions(limit: int | None) -> list[dict]:
         print(f"analyzing {session_dir.name}...", flush=True)
         report = analyze_session(session_dir, DECK, limit=limit)
         reports.append(report)
-        (session_dir / "detections.json").write_text(
-            json.dumps(report, indent=1), encoding="utf-8"
-        )
+        (session_dir / "detections.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
         print(
             f"  valid {report['frames_valid']}/{report['frames_total']} "
             f"(skipped {report['frames_skipped']}), mean score {report['mean_score']:.3f}"
@@ -136,8 +134,10 @@ def main() -> None:
 
     report_md = render_report(reports, valid, totals, hands, synth_frames, synth_counts)
     (REPO / "data" / "REPORT.md").write_text(report_md, encoding="utf-8")
-    print(f"\nreport -> data/REPORT.md | real valid frames {valid}, "
-          f"synthetic frames {synth_frames}, train classes below gate: {train_below}")
+    print(
+        f"\nreport -> data/REPORT.md | real valid frames {valid}, "
+        f"synthetic frames {synth_frames}, train classes below gate: {train_below}"
+    )
 
 
 if __name__ == "__main__":

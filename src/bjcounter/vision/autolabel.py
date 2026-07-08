@@ -23,9 +23,9 @@ BACK_Y = 5358
 CORNER_W, CORNER_H = 22, 60  # top-left strip: rank glyph + suit pip, visible even in a fan
 RANKS = ("2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A")
 SUITS = ("c", "d", "h", "s")  # sprite block order, verified
-CLASS_NAMES: tuple[str, ...] = tuple(
-    f"{rank}{suit}" for suit in SUITS for rank in RANKS
-) + ("back",)
+CLASS_NAMES: tuple[str, ...] = tuple(f"{rank}{suit}" for suit in SUITS for rank in RANKS) + (
+    "back",
+)
 BACK_CLASS = 52
 
 MATCH_THRESHOLD = 0.88
@@ -97,9 +97,7 @@ def detect_cards(
                 break
             raw.append(CardHit(class_id, int(loc[0]), int(loc[1]), float(score)))
             x, y = loc
-            result[
-                max(0, y - suppress) : y + suppress, max(0, x - suppress) : x + suppress
-            ] = -1.0
+            result[max(0, y - suppress) : y + suppress, max(0, x - suppress) : x + suppress] = -1.0
 
     dedup_r = max(round(10 * scale), 6)
     kept: list[CardHit] = []
@@ -126,9 +124,7 @@ def player_hand_clusters(hits: list[CardHit], scale: float, frame_h: int) -> int
     ys = [h.y for h in hits if h.class_id != BACK_CLASS]
     if not ys:
         return 0
-    player = sorted(
-        h.x for h in hits if h.class_id != BACK_CLASS and h.y > frame_h * 0.42
-    )
+    player = sorted(h.x for h in hits if h.class_id != BACK_CLASS and h.y > frame_h * 0.42)
     if not player:
         return 0
     clusters = 1
@@ -138,9 +134,7 @@ def player_hand_clusters(hits: list[CardHit], scale: float, frame_h: int) -> int
     return clusters
 
 
-def analyze_session(
-    session_dir: Path, deck_png: Path, limit: int | None = None
-) -> dict:
+def analyze_session(session_dir: Path, deck_png: Path, limit: int | None = None) -> dict:
     """Detections + stats for one capture session; returns a report dict."""
     meta = json.loads((session_dir / "session_meta.json").read_text())
     scale = float(meta["scale"])
@@ -180,6 +174,7 @@ def analyze_session(
         "mean_score": float(np.mean(scores)) if scores else 0.0,
         "min_score": float(np.min(scores)) if scores else 0.0,
         "frame_height": sample_h,
-        "detections": {n: [(h.class_id, h.x, h.y, round(h.score, 4)) for h in v]
-                       for n, v in per_frame.items()},
+        "detections": {
+            n: [(h.class_id, h.x, h.y, round(h.score, 4)) for h in v] for n, v in per_frame.items()
+        },
     }

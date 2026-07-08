@@ -38,7 +38,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--per-class", type=int, default=80, help="min instances per class")
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument(
-        "--background-pct", type=int, default=5,
+        "--background-pct",
+        type=int,
+        default=5,
         help="extra empty-felt frames (%% of planned frames) for false-positive suppression",
     )
     parser.add_argument("--out", type=Path, default=OUT)
