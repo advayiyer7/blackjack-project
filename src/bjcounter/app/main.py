@@ -74,7 +74,7 @@ def parse_region(raw: str) -> tuple[tuple[int, int, int, int], float]:
 
 
 def build_config(args: argparse.Namespace) -> AppConfig:
-    config = None if args.relocate else load_config()
+    config = None if args.relocate or args.region else load_config()
     if config is None:
         if args.region:
             region, scale = parse_region(args.region)

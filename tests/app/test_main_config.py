@@ -45,3 +45,20 @@ def test_template_flag_overrides_detector(tmp_path, monkeypatch):
     assert config.region == (0, 0, 960, 676)
     # Persisted config keeps the default detector; --template is per-invocation.
     assert config_module.load_config(tmp_path / "config.json").detector == "onnx"
+
+
+def test_region_flag_replaces_saved_region(tmp_path, monkeypatch):
+    from bjcounter.app.config import AppConfig, load_config, save_config
+    from bjcounter.app.main import build_config
+
+    path = tmp_path / "config.json"
+    save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+    monkeypatch.setattr("bjcounter.app.main.load_config", lambda: load_config(path))
+    monkeypatch.setattr("bjcounter.app.main.save_config", lambda cfg: save_config(cfg, path))
+
+    args = argparse.Namespace(relocate=False, template=False, region="100,200,1200,845")
+    config = build_config(args)
+
+    assert config.region == (100, 200, 1200, 845)
+    assert config.scale == 1.25
+    assert load_config(path) == config
