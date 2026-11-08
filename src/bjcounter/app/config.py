@@ -14,6 +14,7 @@ flow instead of a raw traceback at startup.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict, dataclass, fields, replace
 from enum import Enum
 from pathlib import Path
@@ -82,6 +83,10 @@ def load_config(path: Path = CONFIG_PATH) -> AppConfig | None:
         rules = _rules_from(raw.pop("rules", {}))
         region = tuple(int(v) for v in raw.pop("region"))
         scale = float(raw.pop("scale"))
+        if len(region) != 4 or region[2] <= 0 or region[3] <= 0:
+            raise ValueError("region must contain X,Y and positive W,H")
+        if not math.isfinite(scale) or scale <= 0:
+            raise ValueError("scale must be a finite positive number")
         known = {f.name for f in fields(AppConfig)}
         overrides = {k: v for k, v in raw.items() if k in known}
         return replace(AppConfig(region=region, scale=scale, rules=rules), **overrides)

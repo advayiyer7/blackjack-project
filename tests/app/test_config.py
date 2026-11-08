@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 
 from bjcounter.app.config import AppConfig, load_config, save_config
@@ -72,6 +73,22 @@ class TestSchemaTolerance:
         path = tmp_path / "config.json"
         path.write_text('{"scale": 1.0}', encoding="utf-8")
         assert load_config(path) is None
+
+    def test_invalid_region_falls_back_to_first_run(self, tmp_path):
+        path = tmp_path / "config.json"
+        for region in ([0, 0, 960], [0, 0, 0, 676], [0, 0, 960, -1]):
+            path.write_text(
+                json.dumps({"region": region, "scale": 1.0}), encoding="utf-8"
+            )
+            assert load_config(path) is None
+
+    def test_invalid_scale_falls_back_to_first_run(self, tmp_path):
+        path = tmp_path / "config.json"
+        for scale in (0, -1, "NaN", "Infinity"):
+            path.write_text(
+                json.dumps({"region": [0, 0, 960, 676], "scale": scale}), encoding="utf-8"
+            )
+            assert load_config(path) is None
 
 
 class TestDerivedGeometry:
