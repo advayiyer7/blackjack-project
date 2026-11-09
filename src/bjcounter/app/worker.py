@@ -116,12 +116,13 @@ class Worker(threading.Thread):
         )
 
     def run(self) -> None:
-        from bjcounter.vision.capture import Grabber
-
-        grabber = Grabber()
+        grabber = None
         try:
-            detector = self._build_detector()
+            from bjcounter.vision.capture import Grabber
+
             shoe = ShoeState(seen=(), decks_total=self._config.rules.decks)
+            grabber = Grabber()
+            detector = self._build_detector()
             round_state = fresh_shoe()
             frame_id = 0
             self._ui.put(status_model(shoe, ("ready — capture at the next deal",)))
@@ -154,6 +155,11 @@ class Worker(threading.Thread):
                             shoe, ("worker error — count unchanged; see console for details",)
                         )
                     )
+        except Exception:  # noqa: BLE001 — startup failures must stop the overlay
+            print(traceback.format_exc(), file=sys.stderr)
         finally:
-            grabber.close()
-            self._ui.put(QUIT)
+            try:
+                if grabber is not None:
+                    grabber.close()
+            finally:
+                self._ui.put(QUIT)

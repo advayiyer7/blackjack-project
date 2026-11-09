@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import queue
+import sys
 from unittest.mock import patch
 
 import numpy as np
@@ -46,3 +47,35 @@ def test_worker_survives_a_detector_error_and_reports_it(capsys):
         assert not worker.is_alive()
         assert ui.get(timeout=5) == QUIT
     assert "RuntimeError: boom" in capsys.readouterr().err
+
+
+def test_worker_logs_grabber_startup_failure_and_stops_ui(capsys):
+    config = AppConfig(region=(0, 0, 100, 100), scale=1.0)
+    jobs: queue.Queue = queue.Queue()
+    ui: queue.Queue = queue.Queue()
+
+    with patch("bjcounter.vision.capture.Grabber", side_effect=RuntimeError("screen unavailable")):
+        worker = Worker(config, jobs, ui)
+        worker.start()
+        assert ui.get(timeout=10) == QUIT
+        worker.join(timeout=10)
+
+    assert not worker.is_alive()
+    assert ui.empty()
+    assert "RuntimeError: screen unavailable" in capsys.readouterr().err
+
+
+def test_worker_stops_ui_when_capture_import_fails(capsys):
+    config = AppConfig(region=(0, 0, 100, 100), scale=1.0)
+    jobs: queue.Queue = queue.Queue()
+    ui: queue.Queue = queue.Queue()
+
+    with patch.dict(sys.modules, {"bjcounter.vision.capture": None}):
+        worker = Worker(config, jobs, ui)
+        worker.start()
+        assert ui.get(timeout=10) == QUIT
+        worker.join(timeout=10)
+
+    assert not worker.is_alive()
+    assert ui.empty()
+    assert "ModuleNotFoundError" in capsys.readouterr().err
