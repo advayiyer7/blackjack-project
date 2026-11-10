@@ -55,19 +55,28 @@ def save_config(config: AppConfig, path: Path = CONFIG_PATH) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def _rule_bool(raw: dict, name: str, default: bool) -> bool:
+    value = raw.get(name, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"rules.{name} must be a boolean")
+    return value
+
+
 def _rules_from(raw: dict) -> Rules:
     """Rules from persisted JSON; missing keys keep the dataclass defaults."""
+    if not isinstance(raw, dict):
+        raise ValueError("rules must be an object")
     defaults = Rules()
     return Rules(
         decks=int(raw.get("decks", defaults.decks)),
-        h17=bool(raw.get("h17", defaults.h17)),
-        das=bool(raw.get("das", defaults.das)),
+        h17=_rule_bool(raw, "h17", defaults.h17),
+        das=_rule_bool(raw, "das", defaults.das),
         surrender=Surrender(raw.get("surrender", defaults.surrender.value)),
-        peek=bool(raw.get("peek", defaults.peek)),
+        peek=_rule_bool(raw, "peek", defaults.peek),
         double=DoubleRule(raw.get("double", defaults.double.value)),
         max_hands=int(raw.get("max_hands", defaults.max_hands)),
         max_ace_hands=int(raw.get("max_ace_hands", defaults.max_ace_hands)),
-        hit_split_aces=bool(raw.get("hit_split_aces", defaults.hit_split_aces)),
+        hit_split_aces=_rule_bool(raw, "hit_split_aces", defaults.hit_split_aces),
     )
 
 

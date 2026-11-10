@@ -90,6 +90,24 @@ class TestSchemaTolerance:
             )
             assert load_config(path) is None
 
+    def test_non_boolean_strategy_flags_do_not_silently_change_advice(self, tmp_path):
+        path = tmp_path / "config.json"
+        for flag in ("h17", "das", "peek", "hit_split_aces"):
+            for value in ("false", 0):
+                save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                raw["rules"][flag] = value
+                path.write_text(json.dumps(raw), encoding="utf-8")
+                assert load_config(path) is None
+
+    def test_non_object_rules_fall_back_to_first_run(self, tmp_path):
+        path = tmp_path / "config.json"
+        save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw["rules"] = []
+        path.write_text(json.dumps(raw), encoding="utf-8")
+        assert load_config(path) is None
+
 
 class TestDerivedGeometry:
     def test_table_origin_scales_the_count_bar(self):
