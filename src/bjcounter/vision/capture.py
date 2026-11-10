@@ -87,7 +87,7 @@ def _best_over_scales(
     for scale in scales:
         w = int(TABLE_W * scale * pre_shrink)
         h = int(TABLE_H * scale * pre_shrink)
-        if w < 40 or h < 40 or w >= screen.shape[1] or h >= screen.shape[0]:
+        if w < 40 or h < 40 or w > screen.shape[1] or h > screen.shape[0]:
             continue
         template = cv2.resize(table, (w, h), interpolation=cv2.INTER_AREA)
         result = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)
