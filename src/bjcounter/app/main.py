@@ -23,7 +23,7 @@ from bjcounter.app.config import (
     save_config,
 )
 from bjcounter.app.worker import CAPTURE, QUIT, RESET, Worker
-from bjcounter.vision.capture import Grabber, find_table, set_dpi_awareness
+from bjcounter.vision.capture import Grabber, find_table, region_with_count_bar, set_dpi_awareness
 
 TABLE_PNG = Path("data/assets/table.png")
 
@@ -52,9 +52,7 @@ def locate_region() -> tuple[tuple[int, int, int, int], float]:
         print("Locating the trainer table (bring it on screen)...")
         screen, (off_x, off_y) = grabber.virtual_screen()
         match = find_table(screen, cv2.imread(str(TABLE_PNG)))
-        x, y, w, h = match.region
-        bar = round(COUNT_BAR_CSS_PX * match.scale)
-        region = (x + off_x, max(y + off_y - bar, 0), w, h + bar)
+        region = region_with_count_bar(match, (off_x, off_y), COUNT_BAR_CSS_PX)
         print(f"Found region={region} scale={match.scale:.2f} score={match.score:.3f}")
         if match.score < 0.45:
             print("WARNING: low match confidence — overlay warnings will show if wrong.")

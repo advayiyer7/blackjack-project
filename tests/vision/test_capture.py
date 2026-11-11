@@ -9,7 +9,13 @@ import pytest
 
 cv2 = pytest.importorskip("cv2")
 
-from bjcounter.vision.capture import TABLE_H, TABLE_W, find_table  # noqa: E402
+from bjcounter.vision.capture import (  # noqa: E402
+    TABLE_H,
+    TABLE_W,
+    TableMatch,
+    find_table,
+    region_with_count_bar,
+)
 
 TABLE_PNG = Path(__file__).resolve().parents[2] / "data" / "assets" / "table.png"
 
@@ -55,3 +61,14 @@ def test_find_table_accepts_a_screen_exactly_the_size_of_the_table():
     assert match.region == (0, 0, TABLE_W, TABLE_H)
     assert match.scale == 1.0
     assert match.score > 0.99
+
+
+def test_count_bar_region_keeps_negative_virtual_screen_coordinates():
+    match = TableMatch(region=(150, 100, 960, 640), scale=1.0, score=0.99)
+    assert region_with_count_bar(match, (-1920, -1080), 36) == (-1770, -1016, 960, 676)
+
+
+def test_count_bar_region_rejects_a_bar_outside_the_virtual_screen():
+    match = TableMatch(region=(150, 20, 960, 640), scale=1.0, score=0.99)
+    with pytest.raises(ValueError, match="count bar"):
+        region_with_count_bar(match, (-1920, -1080), 36)

@@ -61,6 +61,18 @@ class TableMatch:
     score: float  # TM_CCOEFF_NORMED peak, 1.0 = perfect
 
 
+def region_with_count_bar(
+    match: TableMatch, screen_offset: tuple[int, int], bar_css_px: int
+) -> BBox:
+    """Convert a table match to an absolute capture region including its count bar."""
+    x, y, w, h = match.region
+    bar = round(bar_css_px * match.scale)
+    if y < bar:
+        raise ValueError("count bar is outside the virtual screen — move the trainer lower")
+    offset_x, offset_y = screen_offset
+    return (x + offset_x, y + offset_y - bar, w, h + bar)
+
+
 def find_table(
     screen_bgr: np.ndarray,
     table_bgr: np.ndarray,

@@ -22,7 +22,7 @@ from pathlib import Path
 
 import cv2
 
-from bjcounter.vision.capture import Grabber, find_table, set_dpi_awareness
+from bjcounter.vision.capture import Grabber, find_table, region_with_count_bar, set_dpi_awareness
 
 REPO = Path(__file__).resolve().parents[1]
 TABLE_PNG = REPO / "data" / "assets" / "table.png"
@@ -48,10 +48,8 @@ def locate_region(grabber: Grabber) -> tuple[tuple[int, int, int, int], float]:
     screen, (offset_x, offset_y) = grabber.virtual_screen()
     print("Searching for the table (one-time, ~10-30s)...")
     match = find_table(screen, cv2.imread(str(TABLE_PNG)))
-    x, y, w, h = match.region
     # Extend upward to include the count bar — per-frame ground truth for evals.
-    bar = round(COUNT_BAR_CSS_PX * match.scale)
-    region = (x + offset_x, max(y + offset_y - bar, 0), w, h + bar)
+    region = region_with_count_bar(match, (offset_x, offset_y), COUNT_BAR_CSS_PX)
     print(f"Found: region={region} scale={match.scale:.2f} score={match.score:.3f}")
     if match.score < MIN_MATCH_SCORE:
         print("WARNING: low match confidence — check the preview carefully or pass --region.")
