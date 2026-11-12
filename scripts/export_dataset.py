@@ -16,6 +16,7 @@ contains third-party-art-derived images).
 
 from __future__ import annotations
 
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -47,28 +48,40 @@ def main() -> None:
     real_frames = list(iter_real_frames(RAW))
     if not real_frames:
         raise SystemExit("no labeled real frames — run scripts/dataset_report.py first")
+    for image in synth_images:
+        label = SYNTHETIC / "labels" / image.with_suffix(".txt").name
+        if not label.is_file():
+            raise SystemExit(f"missing synthetic label: {label} — rerun scripts/make_synthetic.py")
 
     counts = {"train": 0, "val": 0, "test": 0}
-    with zipfile.ZipFile(OUT_ZIP, "w", compression=zipfile.ZIP_STORED) as zf:
-        zf.writestr("dataset/data.yaml", data_yaml())
+    with tempfile.NamedTemporaryFile(
+        prefix=f".{OUT_ZIP.name}.", suffix=".tmp", dir=OUT_ZIP.parent, delete=False
+    ) as temp_file:
+        temp_path = Path(temp_file.name)
+    try:
+        with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("dataset/data.yaml", data_yaml())
 
-        for image in synth_images:
-            label = SYNTHETIC / "labels" / image.with_suffix(".txt").name
-            zf.write(image, f"dataset/images/train/{image.name}")
-            zf.write(label, f"dataset/labels/train/{label.name}")
-            counts["train"] += 1
+            for image in synth_images:
+                label = SYNTHETIC / "labels" / image.with_suffix(".txt").name
+                zf.write(image, f"dataset/images/train/{image.name}")
+                zf.write(label, f"dataset/labels/train/{label.name}")
+                counts["train"] += 1
 
-        for frame in real_frames:
-            lines = [
-                yolo_line(hit, frame.scale, frame.frame_w, frame.frame_h) for hit in frame.hits
-            ]
-            stem = Path(frame.export_name).stem
-            zf.write(frame.path, f"dataset/images/{frame.split}/{frame.export_name}")
-            zf.writestr(
-                f"dataset/labels/{frame.split}/{stem}.txt",
-                "\n".join(lines) + ("\n" if lines else ""),
-            )
-            counts[frame.split] += 1
+            for frame in real_frames:
+                lines = [
+                    yolo_line(hit, frame.scale, frame.frame_w, frame.frame_h) for hit in frame.hits
+                ]
+                stem = Path(frame.export_name).stem
+                zf.write(frame.path, f"dataset/images/{frame.split}/{frame.export_name}")
+                zf.writestr(
+                    f"dataset/labels/{frame.split}/{stem}.txt",
+                    "\n".join(lines) + ("\n" if lines else ""),
+                )
+                counts[frame.split] += 1
+        temp_path.replace(OUT_ZIP)
+    finally:
+        temp_path.unlink(missing_ok=True)
 
     size_mb = OUT_ZIP.stat().st_size / 2**20
     print(f"{OUT_ZIP} ({size_mb:.0f} MB)")
