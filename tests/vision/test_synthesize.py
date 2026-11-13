@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from scripts.make_synthetic import render_all
 
 from bjcounter.vision.autolabel import BACK_CLASS, CLASS_NAMES, detect_cards, load_templates
 from bjcounter.vision.synthesize import (
@@ -47,6 +48,45 @@ def fake_table() -> np.ndarray:
 
 def spec(dealer=(0, BACK_CLASS), hands=((13, 26),), scale=1.0) -> FrameSpec:
     return FrameSpec(dealer=tuple(dealer), hands=tuple(tuple(h) for h in hands), scale=scale)
+
+
+def test_regeneration_removes_stale_generated_frames(tmp_path, fake_table, fake_deck):
+    frames = [spec(), spec(dealer=(1, BACK_CLASS))]
+    render_all(frames, fake_table, fake_deck, tmp_path, random.Random(7))
+    unrelated = tmp_path / "images" / "notes.txt"
+    unrelated.write_text("keep", encoding="utf-8")
+    unrelated_numbered = tmp_path / "images" / "frame_1.png"
+    unrelated_numbered.write_bytes(b"keep")
+    noncanonical = tmp_path / "images" / "frame_000001.png"
+    noncanonical.write_bytes(b"also keep")
+
+    render_all(frames[:1], fake_table, fake_deck, tmp_path, random.Random(7))
+
+    assert sorted(p.name for p in (tmp_path / "images").glob("frame_*.png")) == [
+        "frame_00000.png",
+        "frame_000001.png",
+        "frame_1.png",
+    ]
+    assert sorted(p.name for p in (tmp_path / "labels").glob("frame_*.txt")) == [
+        "frame_00000.txt"
+    ]
+    assert unrelated.read_text(encoding="utf-8") == "keep"
+    assert unrelated_numbered.read_bytes() == b"keep"
+    assert noncanonical.read_bytes() == b"also keep"
+
+
+def test_failed_image_write_does_not_prune_previous_frames(
+    tmp_path, fake_table, fake_deck, monkeypatch
+):
+    frames = [spec(), spec(dealer=(1, BACK_CLASS))]
+    render_all(frames, fake_table, fake_deck, tmp_path, random.Random(7))
+    monkeypatch.setattr("scripts.make_synthetic.cv2.imwrite", lambda *args: False)
+
+    with pytest.raises(OSError, match="failed to write"):
+        render_all(frames[:1], fake_table, fake_deck, tmp_path, random.Random(7))
+
+    assert (tmp_path / "images" / "frame_00001.png").exists()
+    assert (tmp_path / "labels" / "frame_00001.txt").exists()
 
 
 class TestPlacements:

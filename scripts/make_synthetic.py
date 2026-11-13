@@ -67,7 +67,9 @@ def render_all(
             f"True Count: {rng.randint(-6, 6):+d}"
         )
         frame, labels = render(spec, table, deck, bar_text=bar)
-        cv2.imwrite(str(images_dir / f"frame_{i:05d}.png"), frame)
+        image_path = images_dir / f"frame_{i:05d}.png"
+        if not cv2.imwrite(str(image_path), frame):
+            raise OSError(f"failed to write synthetic image: {image_path}")
         (labels_dir / f"frame_{i:05d}.txt").write_text(
             "\n".join(labels) + ("\n" if labels else ""), encoding="utf-8"
         )
@@ -75,6 +77,19 @@ def render_all(
             counts[CLASS_NAMES[int(line.split()[0])]] += 1
         if (i + 1) % 100 == 0:
             print(f"  {i + 1}/{len(frames)} frames rendered...", flush=True)
+
+    # A shorter regeneration must not leave frames from the previous recipe in
+    # the training export. Remove only generated frame names after all writes succeed.
+    current = {f"frame_{i:05d}" for i in range(len(frames))}
+    for directory, suffix in ((images_dir, "png"), (labels_dir, "txt")):
+        for path in directory.glob(f"frame_*.{suffix}"):
+            number = path.stem[6:]
+            if (
+                number.isdigit()
+                and path.stem == f"frame_{int(number):05d}"
+                and path.stem not in current
+            ):
+                path.unlink()
     return counts
 
 
