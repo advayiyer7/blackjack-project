@@ -104,6 +104,12 @@ def main() -> None:
         for label, n in op_missed.items():
             rank_fn[rank_of(label)] += n
 
+    if not per_class_gt:
+        raise SystemExit(
+            f"no ground-truth cards in {args.split} split — "
+            "capture and label real frames before evaluation"
+        )
+
     aps = {
         label: average_precision(per_class_records[label], n_gt)
         for label, n_gt in per_class_gt.items()
@@ -120,11 +126,13 @@ def main() -> None:
     rank_recall = {
         r: rank_tp[r] / (rank_tp[r] + rank_fn[r]) for r in sorted(set(rank_tp) | set(rank_fn))
     }
+    required_ranks = {rank_of(label) for label in CLASS_NAMES}
+    missing_ranks = sorted(required_ranks - rank_recall.keys())
     latency_ms = statistics.median(latencies)
 
     gates = {
         "map50": map50 >= GATE_MAP50,
-        "per_rank_recall": bool(rank_recall) and min(rank_recall.values()) >= GATE_RANK_RECALL,
+        "per_rank_recall": not missing_ranks and min(rank_recall.values()) >= GATE_RANK_RECALL,
         "latency": latency_ms < GATE_LATENCY_MS,
     }
     metrics = {
@@ -136,6 +144,7 @@ def main() -> None:
         "map50": round(map50, 5),
         "per_class_ap50": {k: round(v, 5) for k, v in sorted(aps.items())},
         "per_rank_recall_at_conf": {k: round(v, 5) for k, v in rank_recall.items()},
+        "missing_ranks": missing_ranks,
         "unscored_fp_for_absent_classes": unscored_fp,
         "latency_ms_median_cpu": round(latency_ms, 1),
         "gates": gates,
@@ -161,6 +170,8 @@ def main() -> None:
             f"WARNING: confident detections of classes absent from this split "
             f"(unscored by mAP): {unscored_fp}"
         )
+    if missing_ranks:
+        print(f"WARNING: no ground-truth examples for ranks: {', '.join(missing_ranks)}")
     print("metrics -> models/metrics.json")
     if not all(gates.values()):
         if not gates["latency"]:
