@@ -108,6 +108,16 @@ class TestSchemaTolerance:
         path.write_text(json.dumps(raw), encoding="utf-8")
         assert load_config(path) is None
 
+    def test_invalid_numeric_rules_do_not_silently_change_count_or_advice(self, tmp_path):
+        path = tmp_path / "config.json"
+        for field in ("decks", "max_hands", "max_ace_hands"):
+            for value in (0, -1, 6.5, "6", True):
+                save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                raw["rules"][field] = value
+                path.write_text(json.dumps(raw), encoding="utf-8")
+                assert load_config(path) is None, (field, value)
+
 
 class TestDerivedGeometry:
     def test_table_origin_scales_the_count_bar(self):

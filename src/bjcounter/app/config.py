@@ -62,20 +62,27 @@ def _rule_bool(raw: dict, name: str, default: bool) -> bool:
     return value
 
 
+def _rule_positive_int(raw: dict, name: str, default: int) -> int:
+    value = raw.get(name, default)
+    if type(value) is not int or value <= 0:
+        raise ValueError(f"rules.{name} must be a positive integer")
+    return value
+
+
 def _rules_from(raw: dict) -> Rules:
     """Rules from persisted JSON; missing keys keep the dataclass defaults."""
     if not isinstance(raw, dict):
         raise ValueError("rules must be an object")
     defaults = Rules()
     return Rules(
-        decks=int(raw.get("decks", defaults.decks)),
+        decks=_rule_positive_int(raw, "decks", defaults.decks),
         h17=_rule_bool(raw, "h17", defaults.h17),
         das=_rule_bool(raw, "das", defaults.das),
         surrender=Surrender(raw.get("surrender", defaults.surrender.value)),
         peek=_rule_bool(raw, "peek", defaults.peek),
         double=DoubleRule(raw.get("double", defaults.double.value)),
-        max_hands=int(raw.get("max_hands", defaults.max_hands)),
-        max_ace_hands=int(raw.get("max_ace_hands", defaults.max_ace_hands)),
+        max_hands=_rule_positive_int(raw, "max_hands", defaults.max_hands),
+        max_ace_hands=_rule_positive_int(raw, "max_ace_hands", defaults.max_ace_hands),
         hit_split_aces=_rule_bool(raw, "hit_split_aces", defaults.hit_split_aces),
     )
 

@@ -477,6 +477,7 @@ Per-milestone review findings that changed contracts or pinned formulas:
 | M4 | LOW | Capture sessions to date were played at the trainer's 8-deck default — irrelevant for detection data (identical card art), but Phase 8 eval sessions MUST set 6 decks / 75-80% penetration (PRD reference config) |
 | M6 | MED | Region selection reuses the proven `find_table` auto-location (+ count-bar extension, persisted to gitignored config.json; `--relocate`/`--region` overrides) instead of the sketched drag-once translucent-window UI — same §4.3 self-calibration makes precision immaterial; the drag UI is deferred unless auto-location proves unreliable in the M6 smoke test |
 | M6 | LOW | Worker surfaces exceptions to the overlay as warnings and keeps running (a dead worker would silently freeze the count); hotkeys are `<ctrl>+<alt>+c/r/q` (capture/reset/quit), configurable in config.json |
+| M6 | MED | Persisted `rules.decks`, `max_hands`, and `max_ace_hands` must be positive JSON integers. Loading previously coerced values with `int()`, silently truncating fractional deck counts and accepting zero; malformed rules now trigger first-run configuration instead of changing count or advice. |
 
 ---
 **Exit criterion (BUILD-GUIDE Phase 3):** user reviews and CONFIRMS this document. Phase 4 (TDD
