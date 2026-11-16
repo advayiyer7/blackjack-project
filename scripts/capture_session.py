@@ -58,7 +58,8 @@ def locate_region(grabber: Grabber) -> tuple[tuple[int, int, int, int], float]:
 
 def confirm_preview(grabber: Grabber, region, session_dir: Path) -> bool:
     preview_path = session_dir / "region_preview.png"
-    cv2.imwrite(str(preview_path), grabber.grab(region))
+    if not cv2.imwrite(str(preview_path), grabber.grab(region)):
+        raise OSError(f"could not save preview: {preview_path}")
     print(f"\nPreview written to: {preview_path}")
     answer = input("Open it — is the whole table (and nothing but the table) inside? [y/n] ")
     return answer.strip().lower().startswith("y")
@@ -77,8 +78,10 @@ def capture_loop(grabber: Grabber, region, session_dir: Path, interval: float) -
             frame = grabber.grab(region)
             digest = hashlib.md5(frame.tobytes()).hexdigest()
             if digest not in seen_hashes:
+                frame_path = session_dir / f"frame_{saved:05d}.png"
+                if not cv2.imwrite(str(frame_path), frame):
+                    raise OSError(f"could not save frame: {frame_path}")
                 seen_hashes.add(digest)
-                cv2.imwrite(str(session_dir / f"frame_{saved:05d}.png"), frame)
                 saved += 1
                 if saved % 25 == 0:
                     print(f"  {saved} unique frames saved...")
@@ -95,33 +98,37 @@ def main() -> None:
         raise SystemExit(f"missing {TABLE_PNG} — see data/assets/README.md, or pass --region")
 
     grabber = Grabber()
-    session_dir = args.out / f"session_{datetime.now():%Y%m%d_%H%M%S}"
-    session_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        session_dir = args.out / f"session_{datetime.now():%Y%m%d_%H%M%S}"
+        session_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.region:
-        x, y, w, h = (int(v) for v in args.region.split(","))
-        region, scale = (x, y, w, h), w / 960
-    else:
-        region, scale = locate_region(grabber)
-
-    while not confirm_preview(grabber, region, session_dir):
-        raw = input("Enter region manually as X,Y,W,H (or blank to retry auto-locate): ").strip()
-        if raw:
-            x, y, w, h = (int(v) for v in raw.split(","))
+        if args.region:
+            x, y, w, h = (int(v) for v in args.region.split(","))
             region, scale = (x, y, w, h), w / 960
         else:
             region, scale = locate_region(grabber)
 
-    meta = {
-        "region": list(region),
-        "scale": scale,
-        "interval_s": args.interval,
-        "started": datetime.now().isoformat(timespec="seconds"),
-    }
-    (session_dir / "session_meta.json").write_text(json.dumps(meta, indent=2))
+        while not confirm_preview(grabber, region, session_dir):
+            raw = input(
+                "Enter region manually as X,Y,W,H (or blank to retry auto-locate): "
+            ).strip()
+            if raw:
+                x, y, w, h = (int(v) for v in raw.split(","))
+                region, scale = (x, y, w, h), w / 960
+            else:
+                region, scale = locate_region(grabber)
 
-    saved = capture_loop(grabber, region, session_dir, args.interval)
-    grabber.close()
+        meta = {
+            "region": list(region),
+            "scale": scale,
+            "interval_s": args.interval,
+            "started": datetime.now().isoformat(timespec="seconds"),
+        }
+        (session_dir / "session_meta.json").write_text(json.dumps(meta, indent=2))
+
+        saved = capture_loop(grabber, region, session_dir, args.interval)
+    finally:
+        grabber.close()
     print(f"\nDone: {saved} unique frames in {session_dir}")
     print("Raw frames are gitignored and stay on this machine.")
 
