@@ -27,15 +27,18 @@ def setup_export(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
         scale=1.0,
         frame_w=960,
         frame_h=676,
-        hits=(),
+        hits=((0, 100, 100, 0.99),),
         split="val",
     )
+    test_image = real_image.with_name("frame_00001.png")
+    test_image.write_bytes(b"test image")
+    test_frame = replace(frame, name=test_image.name, path=test_image, split="test")
     output = tmp_path / "dataset_yolo.zip"
     output.write_bytes(b"last complete archive")
     monkeypatch.setattr(export_dataset, "SYNTHETIC", synthetic)
     monkeypatch.setattr(export_dataset, "RAW", tmp_path / "raw")
     monkeypatch.setattr(export_dataset, "OUT_ZIP", output)
-    monkeypatch.setattr(export_dataset, "iter_real_frames", lambda _: iter((frame,)))
+    monkeypatch.setattr(export_dataset, "iter_real_frames", lambda _: iter((frame, test_frame)))
     return synthetic, output
 
 
@@ -54,11 +57,11 @@ def test_mid_export_error_preserves_previous_archive(tmp_path, monkeypatch):
     label.parent.mkdir()
     label.write_text("", encoding="utf-8")
     monkeypatch.setattr(export_dataset, "yolo_line", lambda *args: 1 / 0)
-    frame = next(export_dataset.iter_real_frames(export_dataset.RAW))
+    frame, test_frame = export_dataset.iter_real_frames(export_dataset.RAW)
     monkeypatch.setattr(
         export_dataset,
         "iter_real_frames",
-        lambda _: iter((replace(frame, hits=((0, 0, 0, 1.0),)),)),
+        lambda _: iter((replace(frame, hits=((0, 0, 0, 1.0),)), test_frame)),
     )
 
     with pytest.raises(ZeroDivisionError):
@@ -82,4 +85,46 @@ def test_complete_export_replaces_archive(tmp_path, monkeypatch):
             "dataset/labels/train/frame_00000.txt",
             "dataset/images/val/session_a_frame_00000.png",
             "dataset/labels/val/session_a_frame_00000.txt",
+            "dataset/images/test/session_a_frame_00001.png",
+            "dataset/labels/test/session_a_frame_00001.txt",
         }
+
+
+@pytest.mark.parametrize("missing_split", ["val", "test"])
+def test_empty_real_split_preserves_previous_archive(tmp_path, monkeypatch, missing_split):
+    synthetic, output = setup_export(tmp_path, monkeypatch)
+    label = synthetic / "labels" / "frame_00000.txt"
+    label.parent.mkdir()
+    label.write_text("", encoding="utf-8")
+    frames = tuple(export_dataset.iter_real_frames(export_dataset.RAW))
+    monkeypatch.setattr(
+        export_dataset,
+        "iter_real_frames",
+        lambda _: (frame for frame in frames if frame.split != missing_split),
+    )
+
+    with pytest.raises(SystemExit, match=f"no labeled {missing_split} real frames"):
+        export_dataset.main()
+
+    assert output.read_bytes() == b"last complete archive"
+
+
+@pytest.mark.parametrize("empty_split", ["val", "test"])
+def test_unlabeled_real_split_preserves_previous_archive(tmp_path, monkeypatch, empty_split):
+    synthetic, output = setup_export(tmp_path, monkeypatch)
+    label = synthetic / "labels" / "frame_00000.txt"
+    label.parent.mkdir()
+    label.write_text("", encoding="utf-8")
+    frames = tuple(export_dataset.iter_real_frames(export_dataset.RAW))
+    monkeypatch.setattr(
+        export_dataset,
+        "iter_real_frames",
+        lambda _: (
+            replace(frame, hits=()) if frame.split == empty_split else frame for frame in frames
+        ),
+    )
+
+    with pytest.raises(SystemExit, match=f"no labeled {empty_split} real frames"):
+        export_dataset.main()
+
+    assert output.read_bytes() == b"last complete archive"

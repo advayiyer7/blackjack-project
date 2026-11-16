@@ -48,6 +48,11 @@ def main() -> None:
     real_frames = list(iter_real_frames(RAW))
     if not real_frames:
         raise SystemExit("no labeled real frames — run scripts/dataset_report.py first")
+    for split in ("val", "test"):
+        if not any(frame.split == split and frame.hits for frame in real_frames):
+            raise SystemExit(
+                f"no labeled {split} real frames — capture and label more frames before export"
+            )
     for image in synth_images:
         label = SYNTHETIC / "labels" / image.with_suffix(".txt").name
         if not label.is_file():
