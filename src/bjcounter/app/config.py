@@ -87,10 +87,13 @@ def _rules_from(raw: dict) -> Rules:
     )
 
 
-def load_config(path: Path = CONFIG_PATH) -> AppConfig | None:
+def load_config(
+    path: Path = CONFIG_PATH, *, detector_override: str | None = None
+) -> AppConfig | None:
     """The persisted config, or None when absent OR unreadable (first-run flow).
 
     Unreadable configs are reported, not raised — the caller relocates and rewrites.
+    Apply a CLI detector override before checking the saved detector value.
     """
     if not path.exists():
         return None
@@ -105,7 +108,12 @@ def load_config(path: Path = CONFIG_PATH) -> AppConfig | None:
             raise ValueError("scale must be a finite positive number")
         known = {f.name for f in fields(AppConfig)}
         overrides = {k: v for k, v in raw.items() if k in known}
-        return replace(AppConfig(region=region, scale=scale, rules=rules), **overrides)
+        config = replace(AppConfig(region=region, scale=scale, rules=rules), **overrides)
+        if detector_override is not None:
+            config = replace(config, detector=detector_override)
+        if config.detector not in ("onnx", "template"):
+            raise ValueError("detector must be 'onnx' or 'template'")
+        return config
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"warning: {path} is unreadable ({exc!r}) — falling back to first-run setup")
         return None

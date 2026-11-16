@@ -118,6 +118,15 @@ class TestSchemaTolerance:
                 path.write_text(json.dumps(raw), encoding="utf-8")
                 assert load_config(path) is None, (field, value)
 
+    def test_unknown_detector_does_not_silently_select_onnx(self, tmp_path):
+        path = tmp_path / "config.json"
+        for detector in ("templte", "", None):
+            save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            raw["detector"] = detector
+            path.write_text(json.dumps(raw), encoding="utf-8")
+            assert load_config(path) is None
+
 
 class TestDerivedGeometry:
     def test_table_origin_scales_the_count_bar(self):
