@@ -113,6 +113,9 @@ def load_config(
             config = replace(config, detector=detector_override)
         if config.detector not in ("onnx", "template"):
             raise ValueError("detector must be 'onnx' or 'template'")
+        threshold = config.conf_threshold
+        if type(threshold) not in (int, float) or not 0 < threshold <= 1:
+            raise ValueError("conf_threshold must be a number in (0, 1]")
         return config
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"warning: {path} is unreadable ({exc!r}) — falling back to first-run setup")

@@ -481,6 +481,7 @@ Per-milestone review findings that changed contracts or pinned formulas:
 | M6 | LOW | Worker surfaces exceptions to the overlay as warnings and keeps running (a dead worker would silently freeze the count); hotkeys are `<ctrl>+<alt>+c/r/q` (capture/reset/quit), configurable in config.json |
 | M6 | MED | Persisted `rules.decks`, `max_hands`, and `max_ace_hands` must be positive JSON integers. Loading previously coerced values with `int()`, silently truncating fractional deck counts and accepting zero; malformed rules now trigger first-run configuration instead of changing count or advice. |
 | M6 | LOW | Persisted detector selection is checked against `onnx` and `template` when loading config. An unknown value previously fell through to ONNX in the worker, so a typo could silently change the selected detector. The `--template` override applies before validation and keeps a valid saved region. |
+| M6 | HIGH | Persisted `conf_threshold` must be numeric and in `(0, 1]`. A negative or NaN threshold previously bypassed the low-confidence filter, potentially admitting unreliable detections into the tracker; malformed values now trigger first-run configuration. |
 
 ---
 **Exit criterion (BUILD-GUIDE Phase 3):** user reviews and CONFIRMS this document. Phase 4 (TDD

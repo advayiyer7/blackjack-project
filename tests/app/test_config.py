@@ -127,6 +127,25 @@ class TestSchemaTolerance:
             path.write_text(json.dumps(raw), encoding="utf-8")
             assert load_config(path) is None
 
+    def test_invalid_confidence_threshold_cannot_disable_detection_filter(self, tmp_path):
+        path = tmp_path / "config.json"
+        for threshold in (
+            -0.1, 0, 1.1, float("nan"), float("inf"), "NaN", "0.8", None, True
+        ):
+            save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            raw["conf_threshold"] = threshold
+            path.write_text(json.dumps(raw), encoding="utf-8")
+            assert load_config(path) is None, threshold
+
+    def test_valid_custom_confidence_threshold_survives(self, tmp_path):
+        path = tmp_path / "config.json"
+        config = replace(
+            AppConfig(region=(0, 0, 960, 676), scale=1.0), conf_threshold=0.65
+        )
+        save_config(config, path)
+        assert load_config(path) == config
+
 
 class TestDerivedGeometry:
     def test_table_origin_scales_the_count_bar(self):
