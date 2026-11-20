@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import time
 from datetime import datetime
 from pathlib import Path
@@ -32,9 +33,22 @@ MIN_MATCH_SCORE = 0.45
 COUNT_BAR_CSS_PX = 36  # the #countinfo bar sits directly above the felt — capture it too
 
 
+def positive_interval(value: str) -> float:
+    """Parse a usable capture delay before any session is created."""
+    try:
+        interval = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("interval must be a positive finite number") from exc
+    if not math.isfinite(interval) or interval <= 0:
+        raise argparse.ArgumentTypeError("interval must be a positive finite number")
+    return interval
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--interval", type=float, default=0.5, help="seconds between grabs")
+    parser.add_argument(
+        "--interval", type=positive_interval, default=0.5, help="seconds between grabs"
+    )
     parser.add_argument("--out", type=Path, default=REPO / "data" / "raw")
     parser.add_argument("--region", type=str, default=None, help="manual X,Y,W,H (absolute px)")
     return parser.parse_args()

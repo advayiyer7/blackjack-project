@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
 import numpy as np
 import pytest
@@ -18,6 +19,19 @@ class FakeGrabber:
 
     def close(self):
         self.closed = True
+
+
+@pytest.mark.parametrize("value", ["0", "-0.5", "nan", "inf", "-inf"])
+def test_capture_interval_must_be_positive_and_finite(value, monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["capture_session.py", "--interval", value])
+    with pytest.raises(SystemExit) as exc:
+        capture_session.parse_args()
+    assert exc.value.code == 2
+
+
+def test_capture_interval_accepts_positive_seconds(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["capture_session.py", "--interval", "0.25"])
+    assert capture_session.parse_args().interval == 0.25
 
 
 def test_failed_frame_write_stops_capture(tmp_path, monkeypatch):
