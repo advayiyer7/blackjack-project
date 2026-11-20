@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -18,6 +19,20 @@ SYNTHETIC = REPO / "data" / "synthetic"
 DECK = REPO / "data" / "assets" / "deck.png"
 TARGET_PER_CLASS = 40
 TARGET_FRAMES = 1500
+
+
+def write_labels_atomic(path: Path, report: dict) -> None:
+    """Replace session labels only after the complete JSON has been written."""
+    payload = json.dumps(report, indent=1)
+    with tempfile.NamedTemporaryFile(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent, delete=False
+    ) as temp_file:
+        temp_path = Path(temp_file.name)
+    try:
+        temp_path.write_text(payload, encoding="utf-8")
+        temp_path.replace(path)
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 def tally_synthetic() -> tuple[int, dict[str, int]]:
@@ -42,7 +57,7 @@ def analyze_real_sessions(limit: int | None) -> list[dict]:
         print(f"analyzing {session_dir.name}...", flush=True)
         report = analyze_session(session_dir, DECK, limit=limit)
         reports.append(report)
-        (session_dir / "detections.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
+        write_labels_atomic(session_dir / "detections.json", report)
         print(
             f"  valid {report['frames_valid']}/{report['frames_total']} "
             f"(skipped {report['frames_skipped']}), mean score {report['mean_score']:.3f}"
