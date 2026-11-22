@@ -69,6 +69,13 @@ class TestSchemaTolerance:
         assert load_config(path) is None
         assert "unreadable" in capsys.readouterr().out
 
+    def test_non_object_config_falls_back_to_first_run(self, tmp_path, capsys):
+        path = tmp_path / "config.json"
+        for raw in ("null", "true", "42", '"config"', "[]"):
+            path.write_text(raw, encoding="utf-8")
+            assert load_config(path) is None
+            assert "unreadable" in capsys.readouterr().out
+
     def test_missing_required_region_falls_back_to_first_run(self, tmp_path):
         path = tmp_path / "config.json"
         path.write_text('{"scale": 1.0}', encoding="utf-8")

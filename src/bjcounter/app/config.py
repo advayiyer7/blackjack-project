@@ -99,6 +99,8 @@ def load_config(
         return None
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError("config must be an object")
         rules = _rules_from(raw.pop("rules", {}))
         region = tuple(int(v) for v in raw.pop("region"))
         scale = float(raw.pop("scale"))
