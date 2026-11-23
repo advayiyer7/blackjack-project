@@ -21,6 +21,16 @@ TARGET_PER_CLASS = 40
 TARGET_FRAMES = 1500
 
 
+def positive_frame_limit(value: str) -> int:
+    try:
+        limit = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("limit must be a positive integer") from exc
+    if limit <= 0:
+        raise argparse.ArgumentTypeError("limit must be a positive integer")
+    return limit
+
+
 def write_labels_atomic(path: Path, report: dict) -> None:
     """Replace session labels only after the complete JSON has been written."""
     payload = json.dumps(report, indent=1)
@@ -139,7 +149,9 @@ def render_report(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", type=int, default=None, help="frames per session cap")
+    parser.add_argument(
+        "--limit", type=positive_frame_limit, default=None, help="frames per session cap"
+    )
     args = parser.parse_args()
 
     reports = analyze_real_sessions(args.limit)

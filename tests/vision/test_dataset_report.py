@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -69,3 +70,18 @@ def test_successful_label_refresh_replaces_previous_file(tmp_path, monkeypatch):
     dataset_report.analyze_real_sessions(limit=None)
 
     assert json.loads(labels.read_text(encoding="utf-8"))["frames_valid"] == 1
+
+
+@pytest.mark.parametrize("limit", ["0", "-1", "not-a-number"])
+def test_invalid_frame_limit_does_not_replace_session_labels(tmp_path, monkeypatch, limit):
+    _session, labels = setup_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(sys, "argv", ["dataset_report.py", "--limit", limit])
+    monkeypatch.setattr(
+        dataset_report, "analyze_session", lambda *_args, **_kwargs: pytest.fail("analyzed")
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        dataset_report.main()
+
+    assert exc.value.code == 2
+    assert labels.read_text(encoding="utf-8") == '{"previous": true}'
