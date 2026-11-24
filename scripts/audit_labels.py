@@ -61,7 +61,9 @@ def save_crop(image, bbox: BBox, out_dir: Path, tag: str) -> None:
         2,
     )
     out_dir.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(out_dir / f"{tag}.png"), crop)
+    crop_path = out_dir / f"{tag}.png"
+    if not cv2.imwrite(str(crop_path), crop):
+        raise OSError(f"could not save audit crop: {crop_path}")
 
 
 def main() -> None:
@@ -93,6 +95,11 @@ def main() -> None:
                 save_crop(image, det.bbox, audit_dir, f"{stem}_weakTP_{label}_{conf:.2f}")
         for label, n in missed.items():
             flags.append(f"MISS {label} x{n}")
+            # match_frame reports missed counts, not which box missed. Save every
+            # ground-truth candidate of this label so the human can review it.
+            for i, (gt_label, bbox) in enumerate(gt):
+                if gt_label == label:
+                    save_crop(image, bbox, audit_dir, f"{stem}_MISS_{label}_candidate{i}")
         if flags:
             marker = " [already excluded]" if frame.excluded else ""
             flagged[frame.session].append(
