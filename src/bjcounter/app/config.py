@@ -118,6 +118,8 @@ def load_config(
         threshold = config.conf_threshold
         if type(threshold) not in (int, float) or not 0 < threshold <= 1:
             raise ValueError("conf_threshold must be a number in (0, 1]")
+        if type(config.bet_cap) is not int or config.bet_cap <= 0:
+            raise ValueError("bet_cap must be a positive integer")
         return config
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"warning: {path} is unreadable ({exc!r}) — falling back to first-run setup")

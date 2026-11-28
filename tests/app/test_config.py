@@ -153,6 +153,21 @@ class TestSchemaTolerance:
         save_config(config, path)
         assert load_config(path) == config
 
+    def test_invalid_bet_cap_cannot_break_worker_advice(self, tmp_path):
+        path = tmp_path / "config.json"
+        for cap in (0, -1, True, 1.5, "8", None):
+            save_config(AppConfig(region=(0, 0, 960, 676), scale=1.0), path)
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            raw["bet_cap"] = cap
+            path.write_text(json.dumps(raw), encoding="utf-8")
+            assert load_config(path) is None, cap
+
+    def test_valid_custom_bet_cap_survives(self, tmp_path):
+        path = tmp_path / "config.json"
+        config = replace(AppConfig(region=(0, 0, 960, 676), scale=1.0), bet_cap=4)
+        save_config(config, path)
+        assert load_config(path) == config
+
 
 class TestDerivedGeometry:
     def test_table_origin_scales_the_count_bar(self):
