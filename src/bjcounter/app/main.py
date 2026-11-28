@@ -134,7 +134,9 @@ def main() -> None:
         overlay.run()
     finally:
         jobs.put(QUIT)  # idempotent: unblocks the worker on every exit path
-        worker.join(timeout=3)
+        worker.join()  # wait for startup to finish before reading its failure status
+    if worker.startup_error is not None:
+        raise SystemExit(1)
     sys.exit(0)
 
 

@@ -103,6 +103,7 @@ class Worker(threading.Thread):
         self._config = config
         self._jobs = jobs
         self._ui = ui
+        self.startup_error: str | None = None
 
     def _build_detector(self) -> CardDetector:
         if self._config.detector == "template":
@@ -156,7 +157,8 @@ class Worker(threading.Thread):
                         )
                     )
         except Exception:  # noqa: BLE001 — startup failures must stop the overlay
-            print(traceback.format_exc(), file=sys.stderr)
+            self.startup_error = traceback.format_exc()
+            print(self.startup_error, file=sys.stderr)
         finally:
             try:
                 if grabber is not None:

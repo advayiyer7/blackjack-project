@@ -62,6 +62,7 @@ def test_worker_logs_grabber_startup_failure_and_stops_ui(capsys):
 
     assert not worker.is_alive()
     assert ui.empty()
+    assert "screen unavailable" in worker.startup_error
     assert "RuntimeError: screen unavailable" in capsys.readouterr().err
 
 
@@ -78,4 +79,5 @@ def test_worker_stops_ui_when_capture_import_fails(capsys):
 
     assert not worker.is_alive()
     assert ui.empty()
+    assert "ModuleNotFoundError" in worker.startup_error
     assert "ModuleNotFoundError" in capsys.readouterr().err
